@@ -1,0 +1,22 @@
+{
+  "name": "silent-segment-detection-removal",
+  "version": "1.0.0",
+  "description": "Silent Segment Detection & Removal UXP Adobe Premiere Pro Plugin",
+  "main": "plugin/index.html",
+  "scripts": {
+    "start": "python -m engine.server",
+    "server": "python -m engine.server",
+    "cli": "python -m engine.cli",
+    "test": "python -m unittest discover tests"
+  },
+  "keywords": [
+    "premiere-pro",
+    "uxp-plugin",
+    "silero-vad",
+    "ffmpeg",
+    "silence-removal",
+    "video-editing"
+  ],
+  "author": "Kushagra",
+  "license": "MIT"
+}

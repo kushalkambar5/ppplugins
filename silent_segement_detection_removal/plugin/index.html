@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Silent Segment Detection & Removal</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <div class="header-bar">
+      <div class="header-title">
+        <span>✂️</span> Silent Segment Detector
+      </div>
+      <div id="server-badge" class="server-badge offline" title="Click to reconnect">
+        <span class="status-dot"></span>
+        <span id="server-status-text">Checking Engine...</span>
+      </div>
+    </div>
+
+    <!-- Mode Switcher -->
+    <div class="mode-tabs">
+      <button id="tab-accurate" class="tab-btn active">
+        <span>🎯</span> Accurate Mode (VAD)
+      </button>
+      <button id="tab-fast" class="tab-btn">
+        <span>⚡</span> Fast Mode (FFmpeg)
+      </button>
+    </div>
+
+    <!-- Clip Selection Info -->
+    <div class="card">
+      <div class="card-title">
+        <span>Timeline Selection</span>
+        <button id="btn-refresh-clip" class="btn-secondary" title="Refresh selected clip">🔄 Sync</button>
+      </div>
+      <div class="clip-info-grid">
+        <div class="clip-info-item">
+          <span class="clip-info-label">Clip Name</span>
+          <span id="clip-name" class="clip-info-val">Loading...</span>
+        </div>
+        <div class="clip-info-item">
+          <span class="clip-info-label">Track</span>
+          <span id="clip-track" class="clip-info-val">-</span>
+        </div>
+        <div class="clip-info-item">
+          <span class="clip-info-label">Duration</span>
+          <span id="clip-duration" class="clip-info-val">-</span>
+        </div>
+        <div class="clip-info-item">
+          <span class="clip-info-label">Frame Rate</span>
+          <span id="clip-fps" class="clip-info-val">-</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="card">
+      <div class="card-title">Detection & Padding Settings</div>
+      <div class="settings-grid">
+        <!-- Silence Threshold dB -->
+        <div class="setting-row">
+          <div class="setting-header">
+            <span class="setting-label">Silence Threshold (Volume)</span>
+            <span id="noise-db-val" class="setting-val-display">-35 dB</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="noise-db-slider" min="-60" max="-10" step="1" value="-35">
+          </div>
+        </div>
+
+        <!-- Min Silence Duration -->
+        <div class="setting-row">
+          <div class="setting-header">
+            <span class="setting-label">Min Silence Duration</span>
+            <span id="min-silence-val" class="setting-val-display">0.50s</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="min-silence-slider" min="0.1" max="3.0" step="0.05" value="0.5">
+          </div>
+        </div>
+
+        <!-- Silero Speech Threshold (Accurate Mode Only) -->
+        <div class="setting-row accurate-only">
+          <div class="setting-header">
+            <span class="setting-label">Silero Speech Sensitivity</span>
+            <span id="speech-thresh-val" class="setting-val-display">0.50</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="speech-thresh-slider" min="0.1" max="0.9" step="0.05" value="0.5">
+          </div>
+        </div>
+
+        <!-- Keep Padding & Merge Gap -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; margin-top:4px;">
+          <div class="setting-row">
+            <span class="setting-label">Keep Before</span>
+            <input type="number" id="keep-before-input" class="number-input-sm" value="0.10" step="0.05" min="0">
+          </div>
+          <div class="setting-row">
+            <span class="setting-label">Keep After</span>
+            <input type="number" id="keep-after-input" class="number-input-sm" value="0.10" step="0.05" min="0">
+          </div>
+          <div class="setting-row">
+            <span class="setting-label">Merge Gap</span>
+            <input type="number" id="merge-gap-input" class="number-input-sm" value="0.20" step="0.05" min="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analyze Button & Progress -->
+    <div>
+      <button id="btn-analyze" class="btn-primary">
+        <span>🔍</span> Analyze Selected Clip
+      </button>
+      <div id="progress-container" class="progress-container">
+        <div class="progress-track">
+          <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        </div>
+        <span id="progress-status-text" class="progress-status-text">Processing...</span>
+      </div>
+    </div>
+
+    <!-- Preview Results Section -->
+    <div id="preview-section" class="preview-section card">
+      <div class="preview-toolbar">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-weight:600; font-size:11px;">Preview Results</span>
+          <select id="filter-select" class="btn-pill" style="outline:none;">
+            <option value="ALL">All Segments</option>
+            <option value="RIPPLE_DELETE">🟢 Ripple Deletes</option>
+            <option value="DISABLE">🟡 Disables</option>
+            <option value="KEEP">⚪ Keeps</option>
+          </select>
+        </div>
+        <div class="bulk-actions">
+          <button id="btn-bulk-ripple" class="btn-pill" title="Set all detected silence to Ripple Delete">All Ripple</button>
+          <button id="btn-bulk-disable" class="btn-pill" title="Set all detected silence to Disable">All Disable</button>
+          <button id="btn-bulk-keep" class="btn-pill" title="Set all to Keep">Keep All</button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th>Timeline Range</th>
+              <th>Duration</th>
+              <th>Classification</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="preview-tbody">
+            <tr>
+              <td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">
+                Select a clip and click "Analyze Selected Clip" to preview silence segments.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer Panel -->
+    <div class="footer-panel">
+      <div class="summary-stats">
+        <span id="total-ops-count">0 edits scheduled</span>
+        <span id="time-saved" style="color:#4ade80; font-weight:600;">Time saved: 0.00s</span>
+      </div>
+      <button id="btn-apply" class="btn-apply" disabled>
+        <span>🚀</span> Apply Edits to Timeline (Right → Left)
+      </button>
+    </div>
+
+    <!-- Activity Log -->
+    <div id="log-drawer" class="log-drawer"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api_client.js"></script>
+  <script src="js/premiere_adapter.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
