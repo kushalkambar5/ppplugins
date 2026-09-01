@@ -167,23 +167,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================================================================
-  // 2. Mode Switching (Accurate VAD vs Fast FFmpeg)
+  // 2. Mode Switching (Apple Configurator Chips: Accurate VAD vs Fast FFmpeg)
   // =========================================================================
-  tabFast.addEventListener("click", () => {
-    currentMode = "fast";
-    tabFast.classList.add("active");
-    tabAccurate.classList.remove("active");
-    accurateOnlySettings.forEach(el => (el.style.display = "none"));
-    logMessage("Switched mode to: Fast Mode (FFmpeg amplitude gate)", "info");
-  });
+  const modeBadge = document.getElementById("mode-badge");
 
-  tabAccurate.addEventListener("click", () => {
-    currentMode = "accurate";
-    tabAccurate.classList.add("active");
-    tabFast.classList.remove("active");
-    accurateOnlySettings.forEach(el => (el.style.display = "flex"));
-    logMessage("Switched mode to: Accurate Mode (Silero Neural VAD)", "info");
-  });
+  function setEngineMode(mode) {
+    currentMode = mode;
+    if (mode === "fast") {
+      tabFast.classList.add("selected");
+      tabAccurate.classList.remove("selected");
+      tabFast.classList.add("active");
+      tabAccurate.classList.remove("active");
+      if (modeBadge) modeBadge.textContent = "Fast FFmpeg Gate";
+      accurateOnlySettings.forEach(el => (el.style.display = "none"));
+      logMessage("Switched mode to: Fast Mode (FFmpeg amplitude gate)", "info");
+    } else {
+      tabAccurate.classList.add("selected");
+      tabFast.classList.remove("selected");
+      tabAccurate.classList.add("active");
+      tabFast.classList.remove("active");
+      if (modeBadge) modeBadge.textContent = "Accurate Neural VAD";
+      accurateOnlySettings.forEach(el => (el.style.display = "flex"));
+      logMessage("Switched mode to: Accurate Mode (Silero Neural VAD)", "info");
+    }
+  }
+
+  tabFast.addEventListener("click", () => setEngineMode("fast"));
+  tabAccurate.addEventListener("click", () => setEngineMode("accurate"));
 
   // =========================================================================
   // 3. Workflow Presets
@@ -600,14 +610,29 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   function setLoading(isLoading, statusText = "") {
+    const analyzeSpinner = document.getElementById("analyze-spinner");
+    const analyzeIcon = document.getElementById("analyze-icon");
+    const btnAnalyzeText = document.getElementById("btn-analyze-text");
+    const cardPanels = document.querySelectorAll(".card-panel");
+
     if (isLoading) {
+      if (analyzeSpinner) analyzeSpinner.style.display = "inline-flex";
+      if (analyzeIcon) analyzeIcon.style.display = "none";
+      if (btnAnalyzeText) btnAnalyzeText.textContent = "Analyzing Audio Waveforms...";
+      cardPanels.forEach(card => card.classList.add("is-analyzing"));
+
       progressCard.style.display = "flex";
-      progressBarFill.style.width = "35%";
-      progressPctText.textContent = "Scanning...";
-      progressStatusText.textContent = statusText;
+      progressBarFill.style.width = "45%";
+      progressPctText.textContent = "Processing...";
+      progressStatusText.textContent = statusText || "Scanning audio with FFmpeg & Silero VAD...";
       btnAnalyze.disabled = true;
       btnApply.disabled = true;
     } else {
+      if (analyzeSpinner) analyzeSpinner.style.display = "none";
+      if (analyzeIcon) analyzeIcon.style.display = "inline-flex";
+      if (btnAnalyzeText) btnAnalyzeText.textContent = "Analyze Selected Clip";
+      cardPanels.forEach(card => card.classList.remove("is-analyzing"));
+
       progressCard.style.display = "none";
       progressBarFill.style.width = "0%";
       progressPctText.textContent = "0%";

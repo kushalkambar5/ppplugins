@@ -75,23 +75,43 @@
       </div>
     </header>
 
-    <!-- Segmented Control / Tabs -->
-    <div class="segmented-tabs">
-      <button id="tab-accurate" class="seg-tab-btn active">
-        <!-- Sparkles / Neural AI Icon -->
-        <svg class="svg-icon" viewBox="0 0 24 24">
-          <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/>
-        </svg>
-        <span>Accurate (Silero VAD)</span>
-      </button>
-      <button id="tab-fast" class="seg-tab-btn">
-        <!-- Zap / Fast Icon -->
-        <svg class="svg-icon" viewBox="0 0 24 24">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-        </svg>
-        <span>Fast (FFmpeg Gate)</span>
-      </button>
-    </div>
+    <!-- Apple Mode Configurator Option Chips (Fast vs Accurate Mode) -->
+    <section class="configurator-section">
+      <div class="configurator-header">
+        <span class="configurator-label">Engine Mode</span>
+        <span id="mode-badge" class="mode-badge">Accurate Neural VAD</span>
+      </div>
+
+      <div class="configurator-grid">
+        <!-- Accurate Mode Chip (Recommended Default) -->
+        <button id="tab-accurate" class="configurator-chip selected" type="button" title="FFmpeg silence detection paired with Silero Neural VAD for high accuracy">
+          <div class="chip-status-ring"></div>
+          <div class="chip-icon-box">
+            <svg class="svg-icon" viewBox="0 0 24 24">
+              <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/>
+            </svg>
+          </div>
+          <div class="chip-text-group">
+            <div class="chip-title">Accurate Mode</div>
+            <div class="chip-desc">Silero Neural VAD + FFmpeg</div>
+          </div>
+        </button>
+
+        <!-- Fast Mode Chip -->
+        <button id="tab-fast" class="configurator-chip" type="button" title="Fast FFmpeg volume threshold gating (10x speed)">
+          <div class="chip-status-ring"></div>
+          <div class="chip-icon-box">
+            <svg class="svg-icon" viewBox="0 0 24 24">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+          </div>
+          <div class="chip-text-group">
+            <div class="chip-title">Fast Mode</div>
+            <div class="chip-desc">FFmpeg Silence Gate</div>
+          </div>
+        </button>
+      </div>
+    </section>
 
     <!-- Timeline Clip Selection Card -->
     <section class="card-panel">
@@ -236,13 +256,20 @@
     </section>
 
     <!-- Primary Action Hero & Progress -->
-    <div>
+    <div class="action-hero-container">
       <button id="btn-analyze" class="btn-primary">
-        <svg class="svg-icon" viewBox="0 0 24 24">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <span>Analyze Selected Clip</span>
+        <span id="analyze-spinner" class="spinner-icon-wrap" style="display:none;">
+          <svg class="svg-icon spin" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="42" stroke-dashoffset="14"></circle>
+          </svg>
+        </span>
+        <span id="analyze-icon" class="btn-icon-wrap">
+          <svg class="svg-icon" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </span>
+        <span id="btn-analyze-text">Analyze Selected Clip</span>
       </button>
 
       <div id="progress-card" class="progress-card">
@@ -251,7 +278,7 @@
           <span id="progress-pct-text">0%</span>
         </div>
         <div class="progress-track">
-          <div id="progress-bar-fill" class="progress-bar-fill"></div>
+          <div id="progress-bar-fill" class="progress-bar-fill shimmering"></div>
         </div>
       </div>
     </div>
