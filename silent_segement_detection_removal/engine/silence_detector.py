@@ -33,6 +33,9 @@ class SilenceDetectorPipeline:
         ffprobe_path: str = "ffprobe",
     ):
         self.ffmpeg = FFmpegDetector(ffmpeg_path=ffmpeg_path, ffprobe_path=ffprobe_path)
+        if model_path is None:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            model_path = os.path.join(base_dir, "models", "silero_vad_16k_op15.onnx")
         self.model_path = model_path
         self._vad = None  # Lazy load
 

@@ -214,7 +214,7 @@ class PremiereAdapter {
   _getMockSelectedClip() {
     return {
       name: "interview_a_roll_take1.mp4",
-      mediaPath: "C:\\Videos\\interview_a_roll_take1.mp4",
+      mediaPath: "e:\\Codes\\APP_UXP_Plugins\\silent_segement_detection_removal\\test_sample.wav",
       clipTimelineStart: 0.0,
       clipTimelineEnd: 65.4,
       sourceInPoint: 0.0,

@@ -67,15 +67,25 @@ class SilenceServerHandler(BaseHTTPRequestHandler):
 
     def _handle_health(self):
         model_exists = False
+        model_path = None
         if self.pipeline and self.pipeline.model_path:
+            model_path = self.pipeline.model_path
             model_exists = os.path.isfile(self.pipeline.model_path)
+        else:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            model_path = os.path.join(base_dir, "models", "silero_vad_16k_op15.onnx")
+            model_exists = os.path.isfile(model_path)
 
         res = {
             "status": "online",
             "service": "Silent Segment Detection Companion Server",
             "version": "1.0.0",
+            "port": DEFAULT_PORT,
             "ffmpeg_available": True,
             "silero_model_available": model_exists,
+            "model_path": model_path if model_exists else None,
+            "python_version": sys.version.split(" ")[0],
+            "platform": sys.platform,
         }
         self._set_cors_headers(200)
         self.wfile.write(json.dumps(res, indent=2).encode("utf-8"))

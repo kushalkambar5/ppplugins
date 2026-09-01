@@ -8,174 +8,317 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Header -->
-    <div class="header-bar">
-      <div class="header-title">
-        <span>✂️</span> Silent Segment Detector
+    
+    <!-- Pro Header Bar -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <div class="brand-icon-box">
+          <!-- Scissors / Waveform SVG Icon -->
+          <svg class="svg-icon" style="width:16px; height:16px;" viewBox="0 0 24 24">
+            <circle cx="6" cy="6" r="3"></circle>
+            <circle cx="6" cy="18" r="3"></circle>
+            <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+            <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+            <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+          </svg>
+        </div>
+        <div class="brand-text-group">
+          <div class="brand-title">
+            Silent Segment Detector
+            <span class="version-tag">v1.0</span>
+          </div>
+        </div>
       </div>
-      <div id="server-badge" class="server-badge offline" title="Click to reconnect">
-        <span class="status-dot"></span>
+
+      <!-- Engine Status Pill Badge -->
+      <div id="server-badge" class="status-pill offline" title="Click to view Engine diagnostics or reconnect">
+        <span class="status-beacon"></span>
         <span id="server-status-text">Checking Engine...</span>
       </div>
-    </div>
 
-    <!-- Mode Switcher -->
-    <div class="mode-tabs">
-      <button id="tab-accurate" class="tab-btn active">
-        <span>🎯</span> Accurate Mode (VAD)
-      </button>
-      <button id="tab-fast" class="tab-btn">
-        <span>⚡</span> Fast Mode (FFmpeg)
-      </button>
-    </div>
-
-    <!-- Clip Selection Info -->
-    <div class="card">
-      <div class="card-title">
-        <span>Timeline Selection</span>
-        <button id="btn-refresh-clip" class="btn-secondary" title="Refresh selected clip">🔄 Sync</button>
+      <!-- Diagnostics Popover / Flyout -->
+      <div id="diagnostics-popover" class="diagnostics-popover">
+        <div class="diagnostics-header">
+          <span>Engine Diagnostics</span>
+          <button id="btn-close-diag" class="btn-ghost" style="padding:1px 4px; font-size:11px;">✕</button>
+        </div>
+        <div class="diag-item">
+          <span>Status</span>
+          <span id="diag-status" class="diag-val fail">Checking...</span>
+        </div>
+        <div class="diag-item">
+          <span>Endpoint</span>
+          <span class="diag-val">http://127.0.0.1:38271</span>
+        </div>
+        <div class="diag-item">
+          <span>FFmpeg Detector</span>
+          <span id="diag-ffmpeg" class="diag-val ok">Available</span>
+        </div>
+        <div class="diag-item">
+          <span>Silero VAD ONNX</span>
+          <span id="diag-silero" class="diag-val ok">Ready (CPU)</span>
+        </div>
+        <div class="diag-actions">
+          <button id="btn-reconnect-now" class="btn-secondary" style="flex:1;">
+            <svg class="svg-icon" viewBox="0 0 24 24">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            Reconnect
+          </button>
+          <button id="btn-copy-cmd" class="btn-ghost" title="Copy server startup command">
+            <svg class="svg-icon" viewBox="0 0 24 24">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
       </div>
+    </header>
+
+    <!-- Segmented Control / Tabs -->
+    <div class="segmented-tabs">
+      <button id="tab-accurate" class="seg-tab-btn active">
+        <!-- Sparkles / Neural AI Icon -->
+        <svg class="svg-icon" viewBox="0 0 24 24">
+          <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/>
+        </svg>
+        <span>Accurate (Silero VAD)</span>
+      </button>
+      <button id="tab-fast" class="seg-tab-btn">
+        <!-- Zap / Fast Icon -->
+        <svg class="svg-icon" viewBox="0 0 24 24">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span>Fast (FFmpeg Gate)</span>
+      </button>
+    </div>
+
+    <!-- Timeline Clip Selection Card -->
+    <section class="card-panel">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-title-icon">
+            <svg class="svg-icon" viewBox="0 0 24 24">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+              <line x1="7" y1="2" x2="7" y2="22"></line>
+              <line x1="17" y1="2" x2="17" y2="22"></line>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <line x1="2" y1="7" x2="7" y2="7"></line>
+              <line x1="2" y1="17" x2="7" y2="17"></line>
+              <line x1="17" y1="17" x2="22" y2="17"></line>
+              <line x1="17" y1="7" x2="22" y2="7"></line>
+            </svg>
+          </span>
+          <span class="card-title">Timeline Selection</span>
+        </div>
+        <button id="btn-refresh-clip" class="btn-secondary" title="Sync clip from active sequence">
+          <svg class="svg-icon" viewBox="0 0 24 24">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          <span>Sync</span>
+        </button>
+      </div>
+
       <div class="clip-info-grid">
         <div class="clip-info-item">
-          <span class="clip-info-label">Clip Name</span>
-          <span id="clip-name" class="clip-info-val">Loading...</span>
+          <span class="clip-info-label">Active Clip</span>
+          <span id="clip-name" class="clip-info-val" title="Clip Name">Loading timeline...</span>
         </div>
         <div class="clip-info-item">
-          <span class="clip-info-label">Track</span>
-          <span id="clip-track" class="clip-info-val">-</span>
+          <span class="clip-info-label">Track / FPS</span>
+          <span id="clip-track" class="clip-info-val clip-badge">-</span>
         </div>
         <div class="clip-info-item">
           <span class="clip-info-label">Duration</span>
-          <span id="clip-duration" class="clip-info-val">-</span>
-        </div>
-        <div class="clip-info-item">
-          <span class="clip-info-label">Frame Rate</span>
-          <span id="clip-fps" class="clip-info-val">-</span>
+          <span id="clip-duration" class="clip-info-val clip-badge">-</span>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Settings Panel -->
-    <div class="card">
-      <div class="card-title">Detection & Padding Settings</div>
+    <!-- Detection & Padding Settings Card -->
+    <section class="card-panel">
+      <div class="card-header">
+        <div class="card-title-group">
+          <span class="card-title-icon">
+            <svg class="svg-icon" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </span>
+          <span class="card-title">Detection & Padding</span>
+        </div>
+      </div>
+
+      <!-- Presets Quick Bar -->
+      <div class="preset-bar">
+        <button id="preset-podcast" class="preset-chip active" title="Balanced podcast / interview profile">Podcast</button>
+        <button id="preset-aggressive" class="preset-chip" title="Fast jump cuts with tight gaps">Aggressive</button>
+        <button id="preset-gentle" class="preset-chip" title="Gentle cinematic breathing room">Cinematic</button>
+        <button id="preset-custom" class="preset-chip" title="Custom manual parameters">Custom</button>
+      </div>
+
       <div class="settings-grid">
-        <!-- Silence Threshold dB -->
+        <!-- Silence Threshold Volume (dB) -->
         <div class="setting-row">
           <div class="setting-header">
             <span class="setting-label">Silence Threshold (Volume)</span>
-            <span id="noise-db-val" class="setting-val-display">-35 dB</span>
+            <span id="noise-db-val" class="setting-val-badge">-35 dB</span>
           </div>
           <div class="slider-container">
             <input type="range" id="noise-db-slider" min="-60" max="-10" step="1" value="-35">
           </div>
         </div>
 
-        <!-- Min Silence Duration -->
+        <!-- Min Silence Duration (s) -->
         <div class="setting-row">
           <div class="setting-header">
             <span class="setting-label">Min Silence Duration</span>
-            <span id="min-silence-val" class="setting-val-display">0.50s</span>
+            <span id="min-silence-val" class="setting-val-badge">0.45s</span>
           </div>
           <div class="slider-container">
-            <input type="range" id="min-silence-slider" min="0.1" max="3.0" step="0.05" value="0.5">
+            <input type="range" id="min-silence-slider" min="0.1" max="3.0" step="0.05" value="0.45">
           </div>
         </div>
 
-        <!-- Silero Speech Threshold (Accurate Mode Only) -->
+        <!-- Silero Speech Sensitivity (Accurate Mode Only) -->
         <div class="setting-row accurate-only">
           <div class="setting-header">
             <span class="setting-label">Silero Speech Sensitivity</span>
-            <span id="speech-thresh-val" class="setting-val-display">0.50</span>
+            <span id="speech-thresh-val" class="setting-val-badge">0.50</span>
           </div>
           <div class="slider-container">
             <input type="range" id="speech-thresh-slider" min="0.1" max="0.9" step="0.05" value="0.5">
           </div>
         </div>
 
-        <!-- Keep Padding & Merge Gap -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; margin-top:4px;">
-          <div class="setting-row">
-            <span class="setting-label">Keep Before</span>
-            <input type="number" id="keep-before-input" class="number-input-sm" value="0.10" step="0.05" min="0">
+        <!-- Padding & Merge Gap Stepper Cards -->
+        <div class="stepper-grid">
+          <div class="stepper-card">
+            <span class="stepper-label">Keep Before</span>
+            <div class="stepper-controls">
+              <button class="stepper-btn" data-target="keep-before-input" data-step="-0.02">−</button>
+              <input type="number" id="keep-before-input" class="stepper-input" value="0.12" step="0.02" min="0">
+              <button class="stepper-btn" data-target="keep-before-input" data-step="0.02">+</button>
+            </div>
           </div>
-          <div class="setting-row">
-            <span class="setting-label">Keep After</span>
-            <input type="number" id="keep-after-input" class="number-input-sm" value="0.10" step="0.05" min="0">
+
+          <div class="stepper-card">
+            <span class="stepper-label">Keep After</span>
+            <div class="stepper-controls">
+              <button class="stepper-btn" data-target="keep-after-input" data-step="-0.02">−</button>
+              <input type="number" id="keep-after-input" class="stepper-input" value="0.12" step="0.02" min="0">
+              <button class="stepper-btn" data-target="keep-after-input" data-step="0.02">+</button>
+            </div>
           </div>
-          <div class="setting-row">
-            <span class="setting-label">Merge Gap</span>
-            <input type="number" id="merge-gap-input" class="number-input-sm" value="0.20" step="0.05" min="0">
+
+          <div class="stepper-card">
+            <span class="stepper-label">Merge Gap</span>
+            <div class="stepper-controls">
+              <button class="stepper-btn" data-target="merge-gap-input" data-step="-0.05">−</button>
+              <input type="number" id="merge-gap-input" class="stepper-input" value="0.20" step="0.05" min="0">
+              <button class="stepper-btn" data-target="merge-gap-input" data-step="0.05">+</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Analyze Button & Progress -->
+    <!-- Primary Action Hero & Progress -->
     <div>
       <button id="btn-analyze" class="btn-primary">
-        <span>🔍</span> Analyze Selected Clip
+        <svg class="svg-icon" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>Analyze Selected Clip</span>
       </button>
-      <div id="progress-container" class="progress-container">
+
+      <div id="progress-card" class="progress-card">
+        <div class="progress-header">
+          <span id="progress-status-text">Processing Audio...</span>
+          <span id="progress-pct-text">0%</span>
+        </div>
         <div class="progress-track">
           <div id="progress-bar-fill" class="progress-bar-fill"></div>
         </div>
-        <span id="progress-status-text" class="progress-status-text">Processing...</span>
       </div>
     </div>
 
-    <!-- Preview Results Section -->
-    <div id="preview-section" class="preview-section card">
+    <!-- Preview Results Section & Data Table -->
+    <section id="preview-section" class="preview-section card-panel">
       <div class="preview-toolbar">
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span style="font-weight:600; font-size:11px;">Preview Results</span>
-          <select id="filter-select" class="btn-pill" style="outline:none;">
-            <option value="ALL">All Segments</option>
-            <option value="RIPPLE_DELETE">🟢 Ripple Deletes</option>
-            <option value="DISABLE">🟡 Disables</option>
-            <option value="KEEP">⚪ Keeps</option>
-          </select>
+        <div class="filter-chips-group">
+          <button class="filter-chip active" data-filter="ALL">All (<span id="count-all">0</span>)</button>
+          <button class="filter-chip" data-filter="RIPPLE_DELETE">Ripple (<span id="count-ripple">0</span>)</button>
+          <button class="filter-chip" data-filter="DISABLE">Disable (<span id="count-disable">0</span>)</button>
+          <button class="filter-chip" data-filter="KEEP">Keep (<span id="count-keep">0</span>)</button>
         </div>
-        <div class="bulk-actions">
-          <button id="btn-bulk-ripple" class="btn-pill" title="Set all detected silence to Ripple Delete">All Ripple</button>
-          <button id="btn-bulk-disable" class="btn-pill" title="Set all detected silence to Disable">All Disable</button>
-          <button id="btn-bulk-keep" class="btn-pill" title="Set all to Keep">Keep All</button>
+
+        <div class="bulk-actions-group">
+          <button id="btn-bulk-ripple" class="bulk-btn" title="Set all silence to Ripple Delete">All Ripple</button>
+          <button id="btn-bulk-disable" class="bulk-btn" title="Set all silence to Disable">All Disable</button>
+          <button id="btn-bulk-keep" class="bulk-btn" title="Set all to Keep">Keep All</button>
         </div>
       </div>
 
       <div class="table-wrapper">
-        <table class="preview-table">
+        <table class="data-table">
           <thead>
             <tr>
               <th>Timeline Range</th>
               <th>Duration</th>
               <th>Classification</th>
-              <th>Action</th>
+              <th style="text-align:right;">Action</th>
             </tr>
           </thead>
           <tbody id="preview-tbody">
             <tr>
-              <td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">
-                Select a clip and click "Analyze Selected Clip" to preview silence segments.
+              <td colspan="4">
+                <div class="table-empty-state">
+                  <div class="empty-icon-wrap">
+                    <svg class="svg-icon" style="width:20px; height:20px;" viewBox="0 0 24 24">
+                      <path d="M2 10v3M6 6v11M10 3v18M14 8v7M18 5v13M22 10v3"></path>
+                    </svg>
+                  </div>
+                  <div class="empty-title">No Segments Analyzed Yet</div>
+                  <div class="empty-desc">Select a clip on the Premiere Pro timeline and click "Analyze Selected Clip" to preview silence segments.</div>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
 
-    <!-- Footer Panel -->
-    <div class="footer-panel">
-      <div class="summary-stats">
-        <span id="total-ops-count">0 edits scheduled</span>
-        <span id="time-saved" style="color:#4ade80; font-weight:600;">Time saved: 0.00s</span>
+    <!-- Footer Action Hub & KPI Metrics -->
+    <footer class="footer-hub">
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <span class="kpi-label">Scheduled Edits</span>
+          <span id="total-ops-count" class="kpi-val">0 edits</span>
+        </div>
+        <div class="kpi-card highlight">
+          <span class="kpi-label">Time Reduction</span>
+          <span id="time-saved" class="kpi-val">0.00s (0%)</span>
+        </div>
       </div>
-      <button id="btn-apply" class="btn-apply" disabled>
-        <span>🚀</span> Apply Edits to Timeline (Right → Left)
-      </button>
-    </div>
 
-    <!-- Activity Log -->
-    <div id="log-drawer" class="log-drawer"></div>
+      <button id="btn-apply" class="btn-apply" disabled>
+        <!-- Directional Arrow SVG (Right -> Left cut engine) -->
+        <svg class="svg-icon" viewBox="0 0 24 24">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span>Apply Edits to Timeline (Right → Left)</span>
+      </button>
+
+      <!-- Activity Drawer Header -->
+      <div id="drawer-toggle" class="drawer-toggle-row">
+        <span>Activity & Diagnostics Log</span>
+        <span id="drawer-arrow">▲</span>
+      </div>
+      <div id="log-drawer" class="log-drawer"></div>
+    </footer>
+
   </div>
 
   <!-- Scripts -->
@@ -184,3 +327,4 @@
   <script src="js/main.js"></script>
 </body>
 </html>
+
