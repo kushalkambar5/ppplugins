@@ -141,8 +141,10 @@ class RangeProcessor:
 
         for current in ranges[1:]:
             prev = merged[-1]
-            # Check overlap or gap
-            if current["start"] - prev["end"] <= merge_gap:
+            same_action = prev.get("action") == current.get("action")
+            same_state = prev.get("state") == current.get("state")
+            # Check overlap or gap (only merge if same action and state)
+            if (same_action and same_state) and (current["start"] - prev["end"] <= merge_gap):
                 prev["end"] = max(prev["end"], current["end"])
                 prev["duration"] = round(prev["end"] - prev["start"], 4)
                 # Combine metadata if present

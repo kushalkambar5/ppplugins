@@ -85,6 +85,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================================================
   async function updateHealth() {
     const res = await api.checkHealth();
+    const diagEndpoint = document.getElementById("diag-endpoint");
+    if (diagEndpoint && res.endpoint) {
+      diagEndpoint.textContent = res.endpoint;
+    }
+
     if (res.online && res.info) {
       serverBadge.className = "status-pill online";
       serverStatusText.textContent = "Engine Connected";
@@ -101,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
       serverBadge.className = "status-pill offline";
       serverStatusText.textContent = "Engine Offline (Start Server)";
 
-      diagStatus.textContent = "Disconnected";
+      diagStatus.textContent = res.error ? `Disconnected (${res.error})` : "Disconnected";
       diagStatus.className = "diag-val fail";
 
       diagFfmpeg.textContent = "Unknown";
@@ -183,11 +188,26 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================================================
   // 3. Workflow Presets
   // =========================================================================
+  // =========================================================================
+  // 3. Workflow Presets
+  // =========================================================================
   const PRESET_CONFIGS = {
     podcast: { noiseDb: -35, minSilence: 0.45, speechThresh: 0.50, keepBefore: 0.12, keepAfter: 0.12, mergeGap: 0.20 },
-    aggressive: { noiseDb: -30, minSilence: 0.25, speechThresh: 0.40, keepBefore: 0.06, keepAfter: 0.06, mergeGap: 0.15 },
-    gentle: { noiseDb: -42, minSilence: 0.75, speechThresh: 0.60, keepBefore: 0.20, keepAfter: 0.20, mergeGap: 0.30 },
+    aggressive: { noiseDb: -30, minSilence: 0.25, speechThresh: 0.65, keepBefore: 0.06, keepAfter: 0.06, mergeGap: 0.15 },
+    gentle: { noiseDb: -42, minSilence: 0.75, speechThresh: 0.35, keepBefore: 0.20, keepAfter: 0.20, mergeGap: 0.30 },
   };
+
+  function updateNoiseDbDisplay(val) {
+    if (noiseDbVal) noiseDbVal.textContent = `${val} dB`;
+  }
+
+  function updateMinSilenceDisplay(val) {
+    if (minSilenceVal) minSilenceVal.textContent = `${parseFloat(val).toFixed(2)}s`;
+  }
+
+  function updateSpeechThreshDisplay(val) {
+    if (speechThreshVal) speechThreshVal.textContent = `${parseFloat(val).toFixed(2)}`;
+  }
 
   function applyPreset(name) {
     activePreset = name;
@@ -198,14 +218,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const cfg = PRESET_CONFIGS[name];
     if (cfg) {
       noiseDbSlider.value = cfg.noiseDb;
-      noiseDbVal.textContent = `${cfg.noiseDb} dB`;
+      updateNoiseDbDisplay(cfg.noiseDb);
 
       minSilenceSlider.value = cfg.minSilence;
-      minSilenceVal.textContent = `${cfg.minSilence.toFixed(2)}s`;
+      updateMinSilenceDisplay(cfg.minSilence);
 
       if (speechThreshSlider) {
         speechThreshSlider.value = cfg.speechThresh;
-        speechThreshVal.textContent = `${cfg.speechThresh.toFixed(2)}`;
+        updateSpeechThreshDisplay(cfg.speechThresh);
       }
 
       keepBeforeInput.value = cfg.keepBefore.toFixed(2);
@@ -233,24 +253,46 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================================================
   // 4. Sliders, Steppers & Numeric Inputs
   // =========================================================================
-  noiseDbSlider.addEventListener("input", (e) => {
-    noiseDbVal.textContent = `${e.target.value} dB`;
-    markCustom();
-  });
-
-  minSilenceSlider.addEventListener("input", (e) => {
-    minSilenceVal.textContent = `${parseFloat(e.target.value).toFixed(2)}s`;
-    markCustom();
-  });
-
-  if (speechThreshSlider) {
-    speechThreshSlider.addEventListener("input", (e) => {
-      speechThreshVal.textContent = `${parseFloat(e.target.value).toFixed(2)}`;
+  ["input", "change"].forEach((evt) => {
+    noiseDbSlider.addEventListener(evt, (e) => {
+      updateNoiseDbDisplay(e.target.value);
       markCustom();
     });
-  }
 
-  // Stepper buttons (+ and -)
+    minSilenceSlider.addEventListener(evt, (e) => {
+      updateMinSilenceDisplay(e.target.value);
+      markCustom();
+    });
+
+    if (speechThreshSlider) {
+      speechThreshSlider.addEventListener(evt, (e) => {
+        updateSpeechThreshDisplay(e.target.value);
+        markCustom();
+      });
+    }
+  });
+
+  // Slider Stepper Buttons (+ and -) for Volume, Duration, and Sensitivity
+  document.querySelectorAll(".slider-step-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-target");
+      const step = parseFloat(btn.getAttribute("data-step") || "0.05");
+      const slider = document.getElementById(targetId);
+      if (slider) {
+        let val = parseFloat(slider.value) || 0;
+        const min = parseFloat(slider.min) || -100;
+        const max = parseFloat(slider.max) || 100;
+        val = Math.max(min, Math.min(max, val + step));
+        // Round to 2 decimal places to prevent float rounding artifacts
+        val = Math.round(val * 100) / 100;
+        slider.value = val;
+        slider.dispatchEvent(new Event("input"));
+        slider.dispatchEvent(new Event("change"));
+      }
+    });
+  });
+
+  // Stepper buttons (+ and -) for padding and merge gap
   document.querySelectorAll(".stepper-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const targetId = btn.getAttribute("data-target");
@@ -313,14 +355,18 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    const minSilence = parseFloat(minSilenceSlider.value);
+    const keepBefore = parseFloat(keepBeforeInput.value) || 0.12;
+    const keepAfter = parseFloat(keepAfterInput.value) || 0.12;
+
     const settings = {
       noise_db: parseFloat(noiseDbSlider.value),
-      min_silence_duration: parseFloat(minSilenceSlider.value),
+      min_silence_duration: minSilence,
       speech_threshold: speechThreshSlider ? parseFloat(speechThreshSlider.value) : 0.5,
-      keep_before: parseFloat(keepBeforeInput.value) || 0.12,
-      keep_after: parseFloat(keepAfterInput.value) || 0.12,
+      keep_before: keepBefore,
+      keep_after: keepAfter,
       merge_gap: parseFloat(mergeGapInput.value) || 0.20,
-      min_final_duration: 0.20,
+      min_final_duration: Math.max(0.02, minSilence - keepBefore - keepAfter),
     };
 
     const clipInfoPayload = {

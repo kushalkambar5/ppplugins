@@ -1,36 +1,107 @@
 /**
  * API Client for Silent Segment Detection Companion Server.
- * Connects to http://127.0.0.1:38271
+ * Connects to http://127.0.0.1:38271 (with localhost fallback).
  */
 
 class ApiClient {
   constructor(baseUrl = "http://127.0.0.1:38271") {
+    this.candidateUrls = ["http://127.0.0.1:38271", "http://localhost:38271"];
     this.baseUrl = baseUrl;
     this.isOnline = false;
     this.serverInfo = null;
   }
 
-  async checkHealth() {
+  /**
+   * Internal HTTP request helper with fetch and XHR fallback for UXP environments
+   */
+  async _request(path, method = "GET", body = null) {
+    const url = `${this.baseUrl}${path}`;
+    const headers = {
+      "Accept": "application/json",
+    };
+    if (body) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    // Try standard fetch first
     try {
-      const resp = await fetch(`${this.baseUrl}/health`, {
-        method: "GET",
-        headers: { "Accept": "application/json" },
-        cache: "no-cache",
+      const resp = await fetch(url, {
+        method: method,
+        headers: headers,
+        body: body ? JSON.stringify(body) : undefined,
       });
 
       if (!resp.ok) {
-        throw new Error(`Server returned status ${resp.status}`);
+        let errDetail = "";
+        try {
+          const errJson = await resp.json();
+          errDetail = errJson.error || "";
+        } catch (_) {}
+        throw new Error(errDetail || `HTTP ${resp.status} (${resp.statusText})`);
       }
 
-      const data = await resp.json();
-      this.isOnline = data.status === "online";
-      this.serverInfo = data;
-      return { online: true, info: data };
-    } catch (e) {
-      this.isOnline = false;
-      this.serverInfo = null;
-      return { online: false, error: e.message };
+      return await resp.json();
+    } catch (fetchErr) {
+      // If fetch fails, try XMLHttpRequest fallback for UXP host contexts
+      if (typeof XMLHttpRequest !== "undefined") {
+        return new Promise((resolve, reject) => {
+          try {
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, url, true);
+            xhr.setRequestHeader("Accept", "application/json");
+            if (body) {
+              xhr.setRequestHeader("Content-Type", "application/json");
+            }
+            xhr.timeout = 10000;
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                  const data = JSON.parse(xhr.responseText);
+                  resolve(data);
+                } catch (e) {
+                  reject(new Error("Invalid JSON response from companion server."));
+                }
+              } else {
+                reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+              }
+            };
+            xhr.onerror = () => reject(new Error(fetchErr.message || "Network request failed"));
+            xhr.ontimeout = () => reject(new Error("Connection timed out"));
+            xhr.send(body ? JSON.stringify(body) : null);
+          } catch (xhrErr) {
+            reject(fetchErr);
+          }
+        });
+      }
+      throw fetchErr;
     }
+  }
+
+  async checkHealth() {
+    let lastError = null;
+
+    // First try the current primary baseUrl
+    for (const url of [this.baseUrl, ...this.candidateUrls.filter(u => u !== this.baseUrl)]) {
+      this.baseUrl = url;
+      try {
+        const data = await this._request("/health", "GET");
+        if (data && data.status === "online") {
+          this.isOnline = true;
+          this.serverInfo = data;
+          return { online: true, info: data, endpoint: this.baseUrl };
+        }
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    this.isOnline = false;
+    this.serverInfo = null;
+    return {
+      online: false,
+      error: lastError ? lastError.message : "Connection refused",
+      endpoint: this.baseUrl,
+    };
   }
 
   async analyzeMedia({ mediaPath, mode = "accurate", clipInfo = null, settings = null }) {
@@ -41,21 +112,7 @@ class ApiClient {
       settings: settings,
     };
 
-    const resp = await fetch(`${this.baseUrl}/analyze`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!resp.ok) {
-      const errJson = await resp.json().catch(() => ({}));
-      throw new Error(errJson.error || `Analysis request failed with status ${resp.status}`);
-    }
-
-    return await resp.json();
+    return await this._request("/analyze", "POST", payload);
   }
 
   async planEdits({ segments, videoTracks = [0], audioTracks = [0], rippleAllTracks = true }) {
@@ -66,21 +123,7 @@ class ApiClient {
       ripple_all_tracks: rippleAllTracks,
     };
 
-    const resp = await fetch(`${this.baseUrl}/plan-edits`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!resp.ok) {
-      const errJson = await resp.json().catch(() => ({}));
-      throw new Error(errJson.error || `Edit plan generation failed with status ${resp.status}`);
-    }
-
-    return await resp.json();
+    return await this._request("/plan-edits", "POST", payload);
   }
 }
 

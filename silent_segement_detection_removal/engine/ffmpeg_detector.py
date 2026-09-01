@@ -155,8 +155,8 @@ class FFmpegDetector:
         silence_ranges = []
         current_start = None
 
-        re_start = re.compile(r"silence_start:\s*([0-9\.]+)")
-        re_end = re.compile(r"silence_end:\s*([0-9\.]+)(?:\s*\|\s*silence_duration:\s*([0-9\.]+))?")
+        re_start = re.compile(r"silence_start:\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)")
+        re_end = re.compile(r"silence_end:\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)(?:\s*\|\s*silence_duration:\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?))?")
 
         for line in output.splitlines():
             m_start = re_start.search(line)

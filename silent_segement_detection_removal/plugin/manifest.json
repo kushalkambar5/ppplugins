@@ -26,13 +26,7 @@
   ],
   "requiredPermissions": {
     "network": {
-      "domains": [
-        "http://127.0.0.1:38271",
-        "http://localhost:38271",
-        "ws://127.0.0.1:38271",
-        "ws://localhost:38271",
-        "all"
-      ]
+      "domains": "all"
     },
     "launchProcess": {
       "schemes": [ "http", "https" ],

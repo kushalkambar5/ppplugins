@@ -80,7 +80,11 @@ class SilenceDetectorPipeline:
         keep_before = float(settings.get("keep_before", 0.1))
         keep_after = float(settings.get("keep_after", 0.1))
         merge_gap = float(settings.get("merge_gap", 0.2))
-        min_final_dur = float(settings.get("min_final_duration", 0.25))
+        # Calculate effective min_final_duration so smaller silence settings aren't discarded
+        if "min_final_duration" in settings:
+            min_final_dur = min(float(settings["min_final_duration"]), max(0.02, min_silence_dur - keep_before - keep_after))
+        else:
+            min_final_dur = max(0.02, min_silence_dur - keep_before - keep_after)
 
         if progress_cb:
             progress_cb(0.05, "Inspecting media metadata...")
@@ -121,11 +125,13 @@ class SilenceDetectorPipeline:
                 progress_cb(0.55, "Running Silero neural voice activity model...")
 
             vad = self._get_vad()
+            # Adapt VAD min silence duration to user's min silence setting
+            vad_min_silence_ms = max(60, min(int(min_silence_dur * 500), 300))
             raw_speech = vad.get_speech_timestamps(
                 audio=audio_data,
                 threshold=speech_thresh,
-                min_speech_duration_ms=250,
-                min_silence_duration_ms=100,
+                min_speech_duration_ms=200,
+                min_silence_duration_ms=vad_min_silence_ms,
                 speech_pad_ms=30,
             )
 

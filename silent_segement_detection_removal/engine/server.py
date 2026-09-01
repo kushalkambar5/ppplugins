@@ -24,23 +24,41 @@ DEFAULT_PORT = 38271
 class SilenceServerHandler(BaseHTTPRequestHandler):
     pipeline: Optional[SilenceDetectorPipeline] = None
 
-    def _set_cors_headers(self, status_code: int = 200, content_type: str = "application/json"):
-        self.send_response(status_code)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        self.send_header("Content-Type", content_type)
-        self.end_headers()
+    def _send_json(self, data: dict, status_code: int = 200):
+        try:
+            body = json.dumps(data, indent=2).encode("utf-8")
+            self.send_response(status_code)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With")
+            self.send_header("Access-Control-Allow-Private-Network", "true")
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def do_OPTIONS(self):
-        self._set_cors_headers(200)
+        try:
+            self.send_response(200)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With")
+            self.send_header("Access-Control-Allow-Private-Network", "true")
+            self.send_header("Access-Control-Max-Age", "86400")
+            self.send_header("Content-Length", "0")
+            self.send_header("Connection", "close")
+            self.end_headers()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def do_GET(self):
         if self.path == "/" or self.path == "/health":
             self._handle_health()
         else:
-            self._set_cors_headers(404)
-            self.wfile.write(json.dumps({"error": f"Endpoint not found: {self.path}"}).encode("utf-8"))
+            self._send_json({"error": f"Endpoint not found: {self.path}"}, 404)
 
     def do_POST(self):
         content_length = int(self.headers.get("Content-Length", 0))
@@ -49,8 +67,7 @@ class SilenceServerHandler(BaseHTTPRequestHandler):
         try:
             data = json.loads(body.decode("utf-8")) if body else {}
         except Exception as e:
-            self._set_cors_headers(400)
-            self.wfile.write(json.dumps({"error": f"Invalid JSON payload: {e}"}).encode("utf-8"))
+            self._send_json({"error": f"Invalid JSON payload: {e}"}, 400)
             return
 
         if self.path == "/analyze":
@@ -58,12 +75,10 @@ class SilenceServerHandler(BaseHTTPRequestHandler):
         elif self.path == "/plan-edits":
             self._handle_plan_edits(data)
         elif self.path == "/shutdown":
-            self._set_cors_headers(200)
-            self.wfile.write(json.dumps({"status": "shutting_down"}).encode("utf-8"))
+            self._send_json({"status": "shutting_down"}, 200)
             threading.Thread(target=self.server.shutdown).start()
         else:
-            self._set_cors_headers(404)
-            self.wfile.write(json.dumps({"error": f"Endpoint not found: {self.path}"}).encode("utf-8"))
+            self._send_json({"error": f"Endpoint not found: {self.path}"}, 404)
 
     def _handle_health(self):
         model_exists = False
@@ -87,14 +102,12 @@ class SilenceServerHandler(BaseHTTPRequestHandler):
             "python_version": sys.version.split(" ")[0],
             "platform": sys.platform,
         }
-        self._set_cors_headers(200)
-        self.wfile.write(json.dumps(res, indent=2).encode("utf-8"))
+        self._send_json(res, 200)
 
     def _handle_analyze(self, data: dict):
         media_path = data.get("media_path")
         if not media_path:
-            self._set_cors_headers(400)
-            self.wfile.write(json.dumps({"error": "Missing 'media_path' parameter"}).encode("utf-8"))
+            self._send_json({"error": "Missing 'media_path' parameter"}, 400)
             return
 
         mode = data.get("mode", "accurate")
@@ -109,15 +122,13 @@ class SilenceServerHandler(BaseHTTPRequestHandler):
                 settings=settings,
                 progress_cb=lambda pct, msg: sys.stdout.write(f"[{pct*100:0.1f}%] {msg}\n"),
             )
-            self._set_cors_headers(200)
-            self.wfile.write(json.dumps(result).encode("utf-8"))
+            self._send_json(result, 200)
         except Exception as e:
             traceback.print_exc()
-            self._set_cors_headers(500)
-            self.wfile.write(json.dumps({
+            self._send_json({
                 "error": str(e),
                 "traceback": traceback.format_exc(),
-            }).encode("utf-8"))
+            }, 500)
 
     def _handle_plan_edits(self, data: dict):
         segments = data.get("segments", [])
@@ -132,12 +143,10 @@ class SilenceServerHandler(BaseHTTPRequestHandler):
                 audio_tracks=audio_tracks,
                 ripple_all_tracks=ripple_all_tracks,
             )
-            self._set_cors_headers(200)
-            self.wfile.write(json.dumps(plan).encode("utf-8"))
+            self._send_json(plan, 200)
         except Exception as e:
             traceback.print_exc()
-            self._set_cors_headers(500)
-            self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            self._send_json({"error": str(e)}, 500)
 
     def log_message(self, format, *args):
         # Override to keep logs clean

@@ -48,7 +48,7 @@
         </div>
         <div class="diag-item">
           <span>Endpoint</span>
-          <span class="diag-val">http://127.0.0.1:38271</span>
+          <span id="diag-endpoint" class="diag-val">http://127.0.0.1:38271</span>
         </div>
         <div class="diag-item">
           <span>FFmpeg Detector</span>
@@ -164,8 +164,12 @@
             <span class="setting-label">Silence Threshold (Volume)</span>
             <span id="noise-db-val" class="setting-val-badge">-35 dB</span>
           </div>
-          <div class="slider-container">
-            <input type="range" id="noise-db-slider" min="-60" max="-10" step="1" value="-35">
+          <div class="slider-row-wrap">
+            <button class="slider-step-btn" data-target="noise-db-slider" data-step="-1" title="Decrease threshold">−</button>
+            <div class="slider-container">
+              <input type="range" id="noise-db-slider" min="-60" max="-10" step="1" value="-35">
+            </div>
+            <button class="slider-step-btn" data-target="noise-db-slider" data-step="1" title="Increase threshold">+</button>
           </div>
         </div>
 
@@ -175,8 +179,12 @@
             <span class="setting-label">Min Silence Duration</span>
             <span id="min-silence-val" class="setting-val-badge">0.45s</span>
           </div>
-          <div class="slider-container">
-            <input type="range" id="min-silence-slider" min="0.1" max="3.0" step="0.05" value="0.45">
+          <div class="slider-row-wrap">
+            <button class="slider-step-btn" data-target="min-silence-slider" data-step="-0.05" title="Decrease min silence">−</button>
+            <div class="slider-container">
+              <input type="range" id="min-silence-slider" min="0.05" max="3.0" step="0.05" value="0.45">
+            </div>
+            <button class="slider-step-btn" data-target="min-silence-slider" data-step="0.05" title="Increase min silence">+</button>
           </div>
         </div>
 
@@ -186,8 +194,12 @@
             <span class="setting-label">Silero Speech Sensitivity</span>
             <span id="speech-thresh-val" class="setting-val-badge">0.50</span>
           </div>
-          <div class="slider-container">
-            <input type="range" id="speech-thresh-slider" min="0.1" max="0.9" step="0.05" value="0.5">
+          <div class="slider-row-wrap">
+            <button class="slider-step-btn" data-target="speech-thresh-slider" data-step="-0.05" title="Decrease speech sensitivity">−</button>
+            <div class="slider-container">
+              <input type="range" id="speech-thresh-slider" min="0.10" max="0.90" step="0.05" value="0.50">
+            </div>
+            <button class="slider-step-btn" data-target="speech-thresh-slider" data-step="0.05" title="Increase speech sensitivity">+</button>
           </div>
         </div>
 

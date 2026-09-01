@@ -66,6 +66,18 @@ class TestFFmpegDetector(unittest.TestCase):
         self.assertEqual(ranges[0]["start"], 10.0)
         self.assertEqual(ranges[0]["end"], 15.0)
 
+    def test_parse_negative_zero_silencedetect(self):
+        detector = FFmpegDetector()
+        mock_output = """
+[silencedetect @ 0000021c3b] silence_start: -0.000000
+[silencedetect @ 0000021c3b] silence_end: 3.450 | silence_duration: 3.450
+        """
+        ranges = detector.parse_silencedetect_output(mock_output)
+        self.assertEqual(len(ranges), 1)
+        self.assertEqual(ranges[0]["start"], 0.0)
+        self.assertEqual(ranges[0]["end"], 3.45)
+        self.assertEqual(ranges[0]["duration"], 3.45)
+
 
 class TestRangeProcessor(unittest.TestCase):
     def test_padding_and_clamping(self):
@@ -73,33 +85,52 @@ class TestRangeProcessor(unittest.TestCase):
         # keep_before = 0.1, keep_after = 0.1
         # Result should be 5.1 -> 7.9
         processor = RangeProcessor(keep_before=0.1, keep_after=0.1, merge_gap=0.2, min_final_duration=0.2)
-        raw = [{"start": 5.0, "end": 8.0}]
+        raw = [{"start": 5.0, "end": 8.0, "action": EditAction.RIPPLE_DELETE, "state": AudioState.CONFIRMED_SILENCE}]
         res = processor.process(raw, clip_start=0.0, clip_end=10.0)
         self.assertEqual(len(res), 1)
         self.assertAlmostEqual(res[0]["start"], 5.1, places=2)
         self.assertAlmostEqual(res[0]["end"], 7.9, places=2)
 
-    def test_merging_close_ranges(self):
-        # Two ranges with gap 0.15s (<= merge_gap of 0.2s)
-        # Range 1: 2.0 -> 4.0
-        # Range 2: 4.15 -> 6.0
-        # Should be merged into one range
+    def test_merging_close_ranges_same_action(self):
+        # Two ranges with gap 0.15s (<= merge_gap of 0.2s) with identical action
         processor = RangeProcessor(keep_before=0.0, keep_after=0.0, merge_gap=0.2, min_final_duration=0.2)
         raw = [
-            {"start": 2.0, "end": 4.0},
-            {"start": 4.15, "end": 6.0},
+            {"start": 2.0, "end": 4.0, "action": EditAction.RIPPLE_DELETE, "state": AudioState.CONFIRMED_SILENCE},
+            {"start": 4.15, "end": 6.0, "action": EditAction.RIPPLE_DELETE, "state": AudioState.CONFIRMED_SILENCE},
         ]
         res = processor.process(raw, clip_start=0.0, clip_end=10.0)
         self.assertEqual(len(res), 1)
         self.assertAlmostEqual(res[0]["start"], 2.0, places=2)
         self.assertAlmostEqual(res[0]["end"], 6.0, places=2)
 
+    def test_action_preserving_distinct_actions_no_swallow(self):
+        # Two ranges close to each other but with DIFFERENT actions (RIPPLE_DELETE vs DISABLE)
+        # Should NOT be merged together into one action
+        processor = RangeProcessor(keep_before=0.0, keep_after=0.0, merge_gap=0.2, min_final_duration=0.1)
+        raw = [
+            {"start": 2.0, "end": 4.0, "action": EditAction.RIPPLE_DELETE, "state": AudioState.CONFIRMED_SILENCE},
+            {"start": 4.05, "end": 6.0, "action": EditAction.DISABLE, "state": AudioState.NON_SPEECH_SOUND},
+        ]
+        res = processor.process(raw, clip_start=0.0, clip_end=10.0)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0]["action"], EditAction.RIPPLE_DELETE)
+        self.assertEqual(res[1]["action"], EditAction.DISABLE)
+
     def test_filter_short_ranges(self):
         # Range of duration 0.1s when min_final_duration is 0.25s should be dropped
         processor = RangeProcessor(keep_before=0.0, keep_after=0.0, min_final_duration=0.25)
-        raw = [{"start": 1.0, "end": 1.1}]
+        raw = [{"start": 1.0, "end": 1.1, "action": EditAction.RIPPLE_DELETE, "state": AudioState.CONFIRMED_SILENCE}]
         res = processor.process(raw, clip_start=0.0, clip_end=10.0)
         self.assertEqual(len(res), 0)
+
+    def test_small_min_duration_preservation(self):
+        # Small min silence setting (0.10s) with min_final_duration=0.05s should be kept
+        processor = RangeProcessor(keep_before=0.02, keep_after=0.02, min_final_duration=0.05)
+        raw = [{"start": 1.0, "end": 1.12, "action": EditAction.RIPPLE_DELETE, "state": AudioState.CONFIRMED_SILENCE}]
+        res = processor.process(raw, clip_start=0.0, clip_end=10.0)
+        self.assertEqual(len(res), 1)
+        self.assertAlmostEqual(res[0]["start"], 1.02, places=2)
+        self.assertAlmostEqual(res[0]["end"], 1.10, places=2)
 
 
 class TestDecisionEngine(unittest.TestCase):

@@ -456,39 +456,112 @@ body {
   border: 1px solid #283956;
 }
 
-/* Custom Range Slider (UXP Safe) */
+/* Custom Range Slider & Steppers (100% UXP Safe) */
+.slider-row-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+}
+
+.slider-step-btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.slider-step-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+.slider-step-btn:active {
+  background: var(--bg-active);
+  transform: scale(0.95);
+}
+
 .slider-container {
   display: flex;
   align-items: center;
   position: relative;
-  height: 14px;
+  height: 18px;
+  flex: 1;
 }
 
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 4px;
+  height: 6px;
   background: var(--bg-input);
-  border-radius: 2px;
+  border-radius: 3px;
   outline: none;
   border: 1px solid var(--border-subtle);
   cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  cursor: pointer;
+  background: transparent;
+  border-radius: 3px;
+  border: none;
 }
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   border-radius: 7px;
   background: #ffffff;
   border: 2px solid var(--accent-primary);
   cursor: pointer;
+  margin-top: -5px; /* Centers 14px thumb on 6px track in WebKit/UXP */
+  transition: transform 0.1s ease, border-color 0.1s ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
   border-color: var(--accent-primary-light);
+  transform: scale(1.15);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  background: var(--accent-primary-light);
+}
+
+input[type="range"]::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  cursor: pointer;
+  background: var(--bg-input);
+  border-radius: 3px;
+  border: 1px solid var(--border-subtle);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  background: #ffffff;
+  border: 2px solid var(--accent-primary);
+  cursor: pointer;
 }
 
 /* Steppers Grid */
