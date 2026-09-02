@@ -84,41 +84,62 @@ function initPlugin() {
   // 1. Health Check & Diagnostics
   // =========================================================================
   async function updateHealth() {
-    const res = await api.checkHealth();
-    const diagEndpoint = document.getElementById("diag-endpoint");
-    if (diagEndpoint && res.endpoint) {
-      diagEndpoint.textContent = res.endpoint;
-    }
+    try {
+      const res = await api.checkHealth();
+      const diagEndpoint = document.getElementById("diag-endpoint");
+      if (diagEndpoint && res.endpoint) {
+        diagEndpoint.textContent = res.endpoint;
+      }
 
-    if (res.online && res.info) {
-      serverBadge.className = "status-pill online";
-      serverStatusText.textContent = "Engine Connected";
+      if (res && res.online && res.info) {
+        if (serverBadge) serverBadge.className = "status-pill online";
+        if (serverStatusText) serverStatusText.textContent = "Engine Connected";
 
-      diagStatus.textContent = "Online";
-      diagStatus.className = "diag-val ok";
+        if (diagStatus) {
+          diagStatus.textContent = "Online";
+          diagStatus.className = "diag-val ok";
+        }
 
-      diagFfmpeg.textContent = res.info.ffmpeg_available ? "Available" : "Not Found";
-      diagFfmpeg.className = res.info.ffmpeg_available ? "diag-val ok" : "diag-val fail";
+        if (diagFfmpeg) {
+          diagFfmpeg.textContent = res.info.ffmpeg_available ? "Available" : "Not Found";
+          diagFfmpeg.className = res.info.ffmpeg_available ? "diag-val ok" : "diag-val fail";
+        }
 
-      diagSilero.textContent = res.info.silero_model_available ? "Ready (CPU)" : "Model Missing";
-      diagSilero.className = res.info.silero_model_available ? "diag-val ok" : "diag-val fail";
-    } else {
-      serverBadge.className = "status-pill offline";
-      serverStatusText.textContent = "Engine Offline (Start Server)";
+        if (diagSilero) {
+          diagSilero.textContent = res.info.silero_model_available ? "Ready (CPU)" : "Model Missing";
+          diagSilero.className = res.info.silero_model_available ? "diag-val ok" : "diag-val fail";
+        }
+      } else {
+        if (serverBadge) serverBadge.className = "status-pill offline";
+        if (serverStatusText) serverStatusText.textContent = "Engine Offline (Start Server)";
 
-      diagStatus.textContent = res.error ? `Disconnected (${res.error})` : "Disconnected";
-      diagStatus.className = "diag-val fail";
+        if (diagStatus) {
+          diagStatus.textContent = (res && res.error) ? `Disconnected (${res.error})` : "Disconnected";
+          diagStatus.className = "diag-val fail";
+        }
 
-      diagFfmpeg.textContent = "Unknown";
-      diagFfmpeg.className = "diag-val fail";
+        if (diagFfmpeg) {
+          diagFfmpeg.textContent = "Unknown";
+          diagFfmpeg.className = "diag-val fail";
+        }
 
-      diagSilero.textContent = "Unknown";
-      diagSilero.className = "diag-val fail";
+        if (diagSilero) {
+          diagSilero.textContent = "Unknown";
+          diagSilero.className = "diag-val fail";
+        }
+      }
+    } catch (err) {
+      if (serverBadge) serverBadge.className = "status-pill offline";
+      if (serverStatusText) serverStatusText.textContent = "Engine Offline";
+      if (diagStatus) {
+        diagStatus.textContent = `Error (${err.message})`;
+        diagStatus.className = "diag-val fail";
+      }
     }
   }
 
   updateHealth();
-  setInterval(updateHealth, 5000);
+  setInterval(updateHealth, 4000);
 
   // Diagnostics Flyout Toggling
   serverBadge.addEventListener("click", (e) => {

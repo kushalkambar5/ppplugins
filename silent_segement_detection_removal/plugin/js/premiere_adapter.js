@@ -709,7 +709,7 @@ class PremiereAdapter {
 
   /**
    * Disables silence intervals on timeline [op.timeline_start, op.timeline_end].
-   * Splits overlapping clips into Left (enabled), Middle (disabled), Right (enabled).
+   * Splits or trims overlapping clips to disable silence.
    */
   async _performDisable(project, sequence, op, clipType) {
     const timelineStart = op.timeline_start;
@@ -740,7 +740,7 @@ class PremiereAdapter {
                 }
               }, "Disable Silence Clip");
             }
-            // Case 2: Silence inside clip -> trim end of left part to timelineStart
+            // Case 2: Silence inside clip -> trim left part to timelineStart
             else if (startSec < timelineStart && endSec > timelineEnd) {
               console.log(`[Adapter] Trimming clip end to disable silence interval`);
               const leftOut = inSec + (timelineStart - startSec);
@@ -758,13 +758,22 @@ class PremiereAdapter {
               const leftOut = inSec + (timelineStart - startSec);
               await project.executeTransaction((compoundAction) => {
                 if (typeof clip.createSetEndAction === "function") {
+                  compoundAction.addAction(clip.createSetEndAction(this._createTickTime(timelineStart)));
+                }
+                if (typeof clip.createSetOutPointAction === "function") {
+                  compoundAction.addAction(clip.createSetOutPointAction(this._createTickTime(leftOut)));
+                }
+              }, "Trim Clip End");
+            }
+            // Case 4: Silence overlaps start of clip
+            else if (startSec >= timelineStart && endSec > timelineEnd) {
               const rightIn = inSec + (timelineEnd - startSec);
               await project.executeTransaction((compoundAction) => {
                 if (typeof clip.createSetStartAction === "function") {
-                  compoundAction.addAction(clip.createSetStartAction(makeTime(timelineEnd)));
+                  compoundAction.addAction(clip.createSetStartAction(this._createTickTime(timelineEnd)));
                 }
                 if (typeof clip.createSetInPointAction === "function") {
-                  compoundAction.addAction(clip.createSetInPointAction(makeTime(rightIn)));
+                  compoundAction.addAction(clip.createSetInPointAction(this._createTickTime(rightIn)));
                 }
               }, "Trim Clip Start");
             }

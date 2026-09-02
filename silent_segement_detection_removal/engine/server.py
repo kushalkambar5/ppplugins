@@ -9,6 +9,7 @@ import sys
 import threading
 import traceback
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 from typing import Optional
 
 # Ensure UTF-8 stdout on Windows console
@@ -21,6 +22,11 @@ from .silence_detector import SilenceDetectorPipeline
 DEFAULT_PORT = 38271
 
 
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+
 class SilenceServerHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     pipeline: Optional[SilenceDetectorPipeline] = None
@@ -31,22 +37,25 @@ class SilenceServerHandler(BaseHTTPRequestHandler):
             self.send_response(status_code)
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With")
+            self.send_header("Access-Control-Allow-Headers", "*")
             self.send_header("Access-Control-Allow-Private-Network", "true")
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Connection", "close")
             self.end_headers()
             self.wfile.write(body)
+            self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):
             pass
+        finally:
+            self.close_connection = True
 
     def do_OPTIONS(self):
         try:
             self.send_response(200)
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With")
+            self.send_header("Access-Control-Allow-Headers", "*")
             self.send_header("Access-Control-Allow-Private-Network", "true")
             self.send_header("Access-Control-Max-Age", "86400")
             self.send_header("Content-Length", "0")
@@ -54,6 +63,8 @@ class SilenceServerHandler(BaseHTTPRequestHandler):
             self.end_headers()
         except (BrokenPipeError, ConnectionResetError):
             pass
+        finally:
+            self.close_connection = True
 
     def do_GET(self):
         if self.path == "/" or self.path == "/health":
@@ -159,7 +170,7 @@ def start_server(port: int = DEFAULT_PORT, model_path: Optional[str] = None):
     SilenceServerHandler.pipeline = pipeline
 
     server_address = ("127.0.0.1", port)
-    httpd = HTTPServer(server_address, SilenceServerHandler)
+    httpd = ThreadedHTTPServer(server_address, SilenceServerHandler)
     print(f"==================================================")
     print(f" Silent Segment Detection Server running on:")
     print(f" http://127.0.0.1:{port}")
