@@ -3,7 +3,7 @@
  * Professional Premiere Pro Panel UI/UX Controller.
  */
 
-document.addEventListener("DOMContentLoaded", () => {
+function initPlugin() {
   const api = new window.ApiClient();
   const adapter = new window.PremiereAdapter();
 
@@ -140,11 +140,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnReconnectNow) {
     btnReconnectNow.addEventListener("click", async () => {
+      const reconnectSvg = btnReconnectNow.querySelector("svg");
       btnReconnectNow.disabled = true;
-      btnReconnectNow.textContent = "Connecting...";
+      if (reconnectSvg) reconnectSvg.classList.add("spin");
+      btnReconnectNow.querySelector("svg + text, span") || (btnReconnectNow.childNodes.forEach(n => { if (n.nodeType === 3 && n.textContent.trim()) n.textContent = " Connecting..."; }));
       await updateHealth();
       setTimeout(() => {
         btnReconnectNow.disabled = false;
+        if (reconnectSvg) reconnectSvg.classList.remove("spin");
         btnReconnectNow.innerHTML = `
           <svg class="svg-icon" viewBox="0 0 24 24">
             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
@@ -327,8 +330,20 @@ document.addEventListener("DOMContentLoaded", () => {
   // 5. Timeline Clip Selection Refresh
   // =========================================================================
   async function refreshSelection() {
+    const syncBtnSpan = btnRefreshClip.querySelector("span");
+    const syncBtnSvg = btnRefreshClip.querySelector("svg");
+    const syncedBanner = document.getElementById("synced-clip-banner");
+    const syncedText = document.getElementById("synced-clip-text");
+
     try {
       btnRefreshClip.disabled = true;
+      // Show loading state on sync button
+      if (syncBtnSvg) syncBtnSvg.classList.add("spin");
+      if (syncBtnSpan) syncBtnSpan.textContent = "Syncing...";
+      clipNameEl.textContent = "Syncing timeline...";
+      clipTrackEl.textContent = "...";
+      clipDurationEl.textContent = "...";
+
       activeClipInfo = await adapter.getSelectedClip();
 
       clipNameEl.textContent = activeClipInfo.name;
@@ -337,16 +352,25 @@ document.addEventListener("DOMContentLoaded", () => {
       clipTrackEl.textContent = `${activeClipInfo.trackType.toUpperCase()} ${activeClipInfo.trackIndex + 1} • ${activeClipInfo.frameRate} fps`;
       clipDurationEl.textContent = `${activeClipInfo.duration.toFixed(2)}s`;
 
+      if (syncedBanner && syncedText) {
+        syncedText.textContent = `${activeClipInfo.name} [Track ${activeClipInfo.trackType.toUpperCase()} ${activeClipInfo.trackIndex + 1} • ${activeClipInfo.duration.toFixed(2)}s]`;
+        syncedBanner.style.display = "flex";
+      }
+
       btnAnalyze.disabled = false;
-      logMessage(`Active Clip: ${activeClipInfo.name} (${activeClipInfo.duration.toFixed(2)}s @ ${activeClipInfo.frameRate} fps)`, "success");
+      logMessage(`Synced Clip: ${activeClipInfo.name} on ${activeClipInfo.trackType.toUpperCase()} ${activeClipInfo.trackIndex + 1} (${activeClipInfo.duration.toFixed(2)}s @ ${activeClipInfo.frameRate} fps)`, "success");
     } catch (err) {
+      activeClipInfo = null;
       clipNameEl.textContent = "No Timeline Clip Selected";
       clipNameEl.title = "Please click a clip in your active sequence";
       clipTrackEl.textContent = "-";
       clipDurationEl.textContent = "-";
+      if (syncedBanner) syncedBanner.style.display = "none";
       logMessage(`Selection notice: ${err.message}`, "warn");
     } finally {
       btnRefreshClip.disabled = false;
+      if (syncBtnSvg) syncBtnSvg.classList.remove("spin");
+      if (syncBtnSpan) syncBtnSpan.textContent = "Sync";
     }
   }
 
@@ -567,7 +591,15 @@ document.addEventListener("DOMContentLoaded", () => {
   btnApply.addEventListener("click", async () => {
     if (detectedSegments.length === 0) return;
 
+    const applyBtnSpan = btnApply.querySelector("span");
+    const applyBtnSvg = btnApply.querySelector("svg");
+    const originalSpanText = applyBtnSpan ? applyBtnSpan.textContent : "";
+
     try {
+      btnApply.disabled = true;
+      if (applyBtnSvg) applyBtnSvg.classList.add("spin");
+      if (applyBtnSpan) applyBtnSpan.textContent = "Applying Edits...";
+
       setLoading(true, "Compiling Right-to-Left edit plan...");
       logMessage("Compiling Right-to-Left non-destructive edit plan...", "info");
 
@@ -591,13 +623,14 @@ document.addEventListener("DOMContentLoaded", () => {
       logMessage(`Execution Result: ${execResult.message}`, "success");
       alert(`Success!\n${execResult.message}\nTotal timeline reduction: ${editPlan.summary.total_time_saved_sec}s`);
 
-      // Refresh selection
       await refreshSelection();
     } catch (err) {
       logMessage(`Apply Edits Error: ${err.message}`, "error");
       alert(`Failed to apply edits: ${err.message}`);
     } finally {
       setLoading(false);
+      if (applyBtnSvg) applyBtnSvg.classList.remove("spin");
+      if (applyBtnSpan) applyBtnSpan.textContent = originalSpanText;
     }
   });
 
@@ -656,6 +689,12 @@ document.addEventListener("DOMContentLoaded", () => {
     logDrawer.appendChild(line);
     logDrawer.scrollTop = logDrawer.scrollHeight;
   }
-});
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initPlugin);
+} else {
+  initPlugin();
+}
 
 

@@ -19,17 +19,18 @@ class ApiClient {
     const headers = {
       "Accept": "application/json",
     };
+    const fetchOptions = {
+      method: method,
+      headers: headers,
+    };
     if (body) {
       headers["Content-Type"] = "application/json";
+      fetchOptions.body = typeof body === "string" ? body : JSON.stringify(body);
     }
 
     // Try standard fetch first
     try {
-      const resp = await fetch(url, {
-        method: method,
-        headers: headers,
-        body: body ? JSON.stringify(body) : undefined,
-      });
+      const resp = await fetch(url, fetchOptions);
 
       if (!resp.ok) {
         let errDetail = "";

@@ -22,6 +22,7 @@ DEFAULT_PORT = 38271
 
 
 class SilenceServerHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
     pipeline: Optional[SilenceDetectorPipeline] = None
 
     def _send_json(self, data: dict, status_code: int = 200):
